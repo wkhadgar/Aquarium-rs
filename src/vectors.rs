@@ -1,4 +1,5 @@
-use std::arch::x86_64::_rdrand64_step;
+use rand::random;
+use std::f64::consts::PI;
 use std::ops::{Add, AddAssign, Mul, Neg, Rem, RemAssign, Sub};
 
 #[derive(Debug)]
@@ -17,16 +18,9 @@ impl Vector2 {
     }
 
     pub fn random_in_radius(r: f64) -> Self {
-        let mut bit_theta: u64 = 0;
-        let mut bit_d: u64 = 0;
-        let thetha;
-        let d;
-        unsafe {
-            _rdrand64_step(&mut bit_theta);
-            _rdrand64_step(&mut bit_d);
-            thetha = (f64::from_bits(bit_theta) / f64::from_bits(u64::MAX)) * 2 * f64::PI;
-            d = (f64::from_bits(bit_d) / f64::from_bits(u64::MAX)).sqrt() * r
-        }
+        let d = (random::<f64>()).sqrt() * r;
+        let thetha = (random::<f64>()) * 2.0 * PI;
+
         Vector2::new(d * f64::cos(thetha), d * f64::sin(thetha))
     }
 
@@ -42,9 +36,13 @@ impl Vector2 {
         (self.x * other.x) + (self.y * other.y)
     }
 
-    pub fn norm(self) -> Self {
-        let scale = 1.0 / self.length();
+    pub fn mag(self, magnitude: f64) -> Self {
+        let scale = magnitude / self.length();
         self * scale
+    }
+
+    pub fn norm(self) -> Self {
+        self.mag(1.0)
     }
 }
 

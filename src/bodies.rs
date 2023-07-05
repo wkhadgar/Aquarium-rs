@@ -75,14 +75,20 @@ impl Body {
 
     pub fn arrive(&mut self, target: Vector2) {
         let to_target = target - self.position;
-        let distance = to_target.length();
-        let clipped_speed = min(self.peak_speed * distance / 100.0, self.peak_speed);
-        let desired_velocity = to_target * (clipped_speed / distance);
+        let clipped_speed = {
+            let a = (self.peak_speed * to_target.length() / 100.0);
+            if a < self.peak_speed {
+                a
+            } else {
+                self.peak_speed
+            }
+        };
+        let desired_velocity = to_target.mag(clipped_speed);
 
         self.steer(desired_velocity - self.velocity, self.peak_speed);
     }
 
     pub fn wander(&mut self) {
-        let wander_point = self.velocity + self.velocity.random_in_radius(10);
+        let wander_point = self.velocity.mag(10.0) + Vector2::random_in_radius(5.0);
     }
 }
