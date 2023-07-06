@@ -1,33 +1,21 @@
 use crate::vectors::Vector2;
-use std::cmp::min;
 
-struct Body {
-    health: f32,
-
-    mass: f64,
-    max_force: f64,
-
-    peak_speed: f64,
-    default_speed: f64,
-    current_speed: f64,
-
-    //collision_rect,
+pub struct Body {
+    pub health: f64,
+    pub mass: f64,
+    pub position: Vector2,
+    pub velocity: Vector2,
     //rect;
+    //collision_rect,
     //texture;
-    position: Vector2,
-    velocity: Vector2,
 }
 
 impl Body {
-    pub fn new(pos: Vector2, mass: f64, peak_speed: f64) -> Self {
+    pub fn new(health: f64, mass: f64, position: Vector2) -> Self {
         Self {
-            health: 100.0,
+            health,
             mass,
-            max_force: 0.0,
-            peak_speed,
-            default_speed: 0.0,
-            current_speed: 0.0,
-            position: pos,
+            position,
             velocity: Vector2::new(0.0, 0.0),
             // new->rect.x = (int) (x - (mass / 2));
             // new->rect.y = (int) (y - (mass / 2));
@@ -43,52 +31,21 @@ impl Body {
         }
     }
 
-    fn steer(&mut self, steer_force: Vector2, mut clamp_speed: f64) {
-        if (steer_force - self.position).length_sqr() < 1.0 {
-            return;
-        }
-
-        if self.current_speed < clamp_speed {
-            self.current_speed += 0.6;
-            clamp_speed = self.current_speed;
-        } else if self.current_speed > clamp_speed {
-            self.current_speed -= 0.6;
-            clamp_speed = self.current_speed;
-        }
-
-        self.velocity += ((steer_force % self.max_force) * (1.0 / self.mass)) % clamp_speed;
-        self.position += self.velocity;
-
-        // body->rect.x = (int) body->position.x - (body->rect.w / 2);
-        // body->rect.y = (int) body->position.y - (body->rect.h / 2);
+    fn rescale(&mut self) {
+        // body->rect.h = 5 * sqrt(body->mass);
+        // body->rect.w = 5 * sqrt(body->mass);
         //
-        // Vector2_t norm_vel = vector_normalize(body->velocity);
-        // body->collision_rect.x = body->position.x + ((body->rect.w / 4) * norm_vel.x) - (body->collision_rect.w / 2);
-        // body->collision_rect.y = body->position.y + ((body->rect.h / 4) * norm_vel.y) - (body->collision_rect.w / 2);
+        // body->collision_rect.w = body->rect.w / 2;
+        // body->collision_rect.h = body->rect.h / 2;
     }
 
-    pub fn seek(&mut self, target: Vector2) {
-        let desired_velocity = (target - self.position) % self.max_force;
-
-        self.steer((desired_velocity - self.velocity), self.peak_speed);
+    pub fn grow(&mut self, mass_gained: f64) {
+        self.mass += mass_gained;
+        self.rescale();
     }
 
-    pub fn arrive(&mut self, target: Vector2) {
-        let to_target = target - self.position;
-        let clipped_speed = {
-            let a = (self.peak_speed * to_target.length() / 100.0);
-            if a < self.peak_speed {
-                a
-            } else {
-                self.peak_speed
-            }
-        };
-        let desired_velocity = to_target.mag(clipped_speed);
-
-        self.steer(desired_velocity - self.velocity, self.peak_speed);
-    }
-
-    pub fn wander(&mut self) {
-        let wander_point = self.velocity.mag(10.0) + Vector2::random_in_radius(5.0);
+    pub fn shrink(&mut self, mass_loss: f64) {
+        self.mass -= mass_loss;
+        self.rescale();
     }
 }
