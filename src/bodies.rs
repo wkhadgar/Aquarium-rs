@@ -5,6 +5,7 @@ pub struct Body {
     pub mass: f64,
     pub position: Vector2,
     pub velocity: Vector2,
+    pub velocity_norm: Vector2,
     //rect;
     //collision_rect,
     //texture;
@@ -12,11 +13,13 @@ pub struct Body {
 
 impl Body {
     pub fn new(health: f64, mass: f64, position: Vector2) -> Self {
+        let vel = Vector2::random_in_radius(1.0);
         Self {
             health,
             mass,
             position,
-            velocity: Vector2::random_in_radius(1.0),
+            velocity: vel,
+            velocity_norm: vel.norm(),
             // new->rect.x = (int) (x - (mass / 2));
             // new->rect.y = (int) (y - (mass / 2));
             // new->rect.w = (int) mass;
