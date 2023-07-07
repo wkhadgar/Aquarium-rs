@@ -12,9 +12,21 @@ enum FishBehaviour {
     FLEEING,
 }
 
-struct Fish {
+struct FishVision {
+    range: f64,
+    depth: f64,
+}
+
+impl FishVision {
+    fn new(range: f64, depth: f64) -> Self {
+        Self { range, depth }
+    }
+}
+
+pub struct Fish {
     body: Body,
     behaviour: FishBehaviour,
+    vision: FishVision,
     max_force: f64,
     peak_speed: f64,
     default_speed: f64,
@@ -27,12 +39,27 @@ impl Fish {
         Self {
             body: Body::new(100.0, mass, pos),
             behaviour: FishBehaviour::WANDERING,
+            vision: FishVision::new(0.0, 100.0),
             max_force: 0.0,
             peak_speed,
             default_speed: 0.0,
             current_speed: 0.0,
-            wander_vector: Vector2::random_in_radius(1.0),
+            wander_vector: Vector2::new(0.0, 0.0),
         }
+    }
+
+    fn is_seeing(&self, target: Body) -> bool {
+        let to_target = target.position - self.body.position;
+
+        if self.body.velocity.norm().dot(to_target.norm()) < self.vision.range {
+            return false;
+        }
+
+        if to_target.length() > self.vision.depth {
+            return false;
+        }
+
+        true
     }
 
     fn steer(&mut self, steer_force: Vector2, mut clamp_speed: f64) {
@@ -58,6 +85,20 @@ impl Fish {
         // Vector2_t norm_vel = vector_normalize(body->velocity);
         // body->collision_rect.x = body->position.x + ((body->rect.w / 4) * norm_vel.x) - (body->collision_rect.w / 2);
         // body->collision_rect.y = body->position.y + ((body->rect.h / 4) * norm_vel.y) - (body->collision_rect.w / 2);
+    }
+
+    pub fn wander(&mut self) {
+        if matches!(self.behaviour, FishBehaviour::WANDERING) {
+            self.wander_vector += Vector2::random_in_radius(3.0);
+        } else {
+            self.behaviour = FishBehaviour::WANDERING;
+            self.wander_vector = self.body.velocity.mag(10.0);
+        }
+
+        self.steer(
+            self.wander_vector.mag(10.0) - self.body.velocity,
+            self.default_speed,
+        );
     }
 
     pub fn seek(&mut self, target: Vector2) {
@@ -90,17 +131,17 @@ impl Fish {
         self.steer(desired_velocity - self.body.velocity, self.peak_speed);
     }
 
-    pub fn wander(&mut self) {
-        if matches!(self.behaviour, FishBehaviour::WANDERING) {
-            self.wander_vector += Vector2::random_in_radius(3.0);
-        } else {
-            self.behaviour = FishBehaviour::WANDERING;
-            self.wander_vector = self.body.velocity.mag(10.0);
-        }
+    pub fn pursuit(&mut self, target: Self) {
+        let scale = (target.body.position - self.body.position).length() * 0.5;
+        let desired_pos = target.body.position + target.body.velocity.mag(scale);
 
-        self.steer(
-            self.wander_vector.mag(10.0) - self.body.velocity,
-            self.default_speed,
-        );
+        self.seek(desired_pos);
+    }
+
+    pub fn evade(&mut self, target: Self) {
+        let scale = (target.body.position - self.body.position).length() * 0.5;
+        let desired_pos = target.body.position + target.body.velocity.mag(scale);
+
+        self.flee(desired_pos);
     }
 }

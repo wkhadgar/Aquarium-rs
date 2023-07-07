@@ -77,14 +77,6 @@ impl Sub for Vector2 {
     }
 }
 
-impl Sub for &Vector2 {
-    type Output = Vector2;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Vector2::new(self.x - rhs.x, self.y - rhs.y)
-    }
-}
-
 impl Mul for Vector2 {
     type Output = f64;
 

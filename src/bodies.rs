@@ -16,7 +16,7 @@ impl Body {
             health,
             mass,
             position,
-            velocity: Vector2::new(0.0, 0.0),
+            velocity: Vector2::random_in_radius(1.0),
             // new->rect.x = (int) (x - (mass / 2));
             // new->rect.y = (int) (y - (mass / 2));
             // new->rect.w = (int) mass;
