@@ -17,6 +17,10 @@ impl Vector2 {
         Vector2::new(vec.x, vec.y)
     }
 
+    pub fn get_components(&self) -> (f64, f64) {
+        (self.x, self.y)
+    }
+
     pub fn random_in_radius(r: f64) -> Self {
         let d = (random::<f64>()).sqrt() * r;
         let thetha = (random::<f64>()) * 2.0 * PI;

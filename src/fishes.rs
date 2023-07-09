@@ -1,10 +1,6 @@
 use crate::bodies::Body;
 use crate::vectors::Vector2;
 
-struct Plant {
-    body: Body,
-}
-
 enum FishBehaviour {
     STILL,
     WANDERING,
@@ -97,7 +93,7 @@ impl Fish {
         }
     }
 
-    fn is_seeing(&self, target: Body) -> bool {
+    pub fn is_seeing(&self, target: Body) -> bool {
         let to_target = target.position - self.body.position;
 
         if self.body.velocity_norm.dot(to_target.norm()) < self.vision.range {
@@ -203,7 +199,7 @@ impl Fish {
         )
     }
 
-    pub fn compute_flock(&mut self, neighbors_amount: u32) {
+    pub fn compute_flock(&mut self) {
         let separation =
             self.desires.flocking.separation_vec.norm() * self.desires.flocking.separation_w;
         let cohesion = self.desires.flocking.cohesion_vec.norm() * self.desires.flocking.cohesion_w;
@@ -214,5 +210,26 @@ impl Fish {
 
         self.steer(flock_vec, self.peak_speed); //verificar se é melhor subtrair a velocidade atual.
         self.desires.flocking.clear();
+    }
+}
+
+struct Plant {
+    body: Body,
+    spreading_radius: f64,
+}
+
+impl Plant {
+    pub fn new(pos: Vector2, mass: f64) -> Self {
+        Self {
+            body: Body::new(mass * 1.5, mass, pos),
+            spreading_radius: mass / 3.0,
+        }
+    }
+
+    pub fn spread(&self) -> Self {
+        Self::new(
+            self.body.position + Vector2::random_in_radius(self.spreading_radius),
+            self.body.mass / 5.0,
+        )
     }
 }
