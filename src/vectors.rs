@@ -17,6 +17,10 @@ impl Vector2 {
         Vector2::new(vec.x, vec.y)
     }
 
+    pub fn angle(&self) -> f64 {
+        self.y.atan2(self.x).to_degrees()
+    }
+
     pub fn get_components(&self) -> (f64, f64) {
         (self.x, self.y)
     }

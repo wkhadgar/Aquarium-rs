@@ -1,5 +1,7 @@
 use crate::bodies::Body;
 use crate::vectors::Vector2;
+use sdl2::render;
+use sdl2::render::{Canvas, WindowCanvas};
 
 enum FishBehaviour {
     STILL,
@@ -210,6 +212,10 @@ impl Fish {
 
         self.steer(flock_vec, self.peak_speed); //verificar se é melhor subtrair a velocidade atual.
         self.desires.flocking.clear();
+    }
+
+    pub fn draw(&self, canvas: WindowCanvas, texture: &render::Texture) {
+        self.body.draw(canvas, texture, false);
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::vectors::Vector2;
 use sdl2::rect::Rect;
-use sdl2::render::Texture;
+use sdl2::render::{Canvas, Texture, WindowCanvas};
+use sdl2::sys::{SDL_Renderer, SDL_Texture, Window};
 
 pub struct Body {
     pub health: f64,
@@ -52,5 +53,30 @@ impl Body {
         self.rescale();
     }
 
-    pub fn draw(&self, texture: Texture) {}
+    pub fn draw(&self, mut canvas: WindowCanvas, texture: &Texture, debug: bool) {
+        let angle = self.velocity.angle();
+        canvas
+            .copy_ex(
+                texture,
+                None,
+                Some(self.rect),
+                angle,
+                None,
+                false,
+                (angle > 90.0) && (angle < 270.0),
+            )
+            .unwrap();
+
+        if debug {
+            let mut r = 0;
+            let mut g = 0;
+            let mut b = 0;
+            //canvas(r, g, b, None);
+            // SDL_SetRenderDrawColor(rend, 255, 0, 0, 0);
+            // SDL_RenderDrawRect(rend, self.rect);
+            // SDL_SetRenderDrawColor(rend, 0, 255, 255, 0);
+            // SDL_RenderDrawRect(rend, self.collision_rect);
+            // SDL_SetRenderDrawColor(rend, r, g, b, 0);
+        }
+    }
 }
