@@ -1,4 +1,5 @@
 use crate::vectors::Vector2;
+use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture, WindowCanvas};
 use sdl2::sys::{SDL_Renderer, SDL_Texture, Window};
@@ -16,8 +17,8 @@ pub struct Body {
 impl Body {
     pub fn new(health: f64, mass: f64, position: Vector2) -> Self {
         let vel = Vector2::random_in_radius(1.0);
-        let (x, y) = position.get_components();
-        let (vx, vy) = vel.get_components();
+        let (x, y): (f64, f64) = position.get_components();
+        let (vx, vy): (f64, f64) = vel.get_components();
         Self {
             health,
             mass,
@@ -53,13 +54,18 @@ impl Body {
         self.rescale();
     }
 
-    pub fn draw(&self, mut canvas: WindowCanvas, texture: &Texture, debug: bool) {
+    pub fn draw(&self, canvas: &mut WindowCanvas, texture: &Texture, debug: bool, offset: Vector2) {
         let angle = self.velocity.angle();
+        let mut display_rect = self.rect;
+        let (offset_x, offset_y) = offset.get_components();
+        display_rect.x += offset_x as i32;
+        display_rect.y += offset_y as i32;
+
         canvas
             .copy_ex(
                 texture,
                 None,
-                Some(self.rect),
+                Some(display_rect),
                 angle,
                 None,
                 false,
@@ -68,15 +74,12 @@ impl Body {
             .unwrap();
 
         if debug {
-            let mut r = 0;
-            let mut g = 0;
-            let mut b = 0;
-            //canvas(r, g, b, None);
-            // SDL_SetRenderDrawColor(rend, 255, 0, 0, 0);
-            // SDL_RenderDrawRect(rend, self.rect);
-            // SDL_SetRenderDrawColor(rend, 0, 255, 255, 0);
-            // SDL_RenderDrawRect(rend, self.collision_rect);
-            // SDL_SetRenderDrawColor(rend, r, g, b, 0);
+            let color = canvas.draw_color();
+            canvas.set_draw_color(Color::RED);
+            canvas.draw_rect(self.rect).unwrap();
+            canvas.set_draw_color(Color::YELLOW);
+            canvas.draw_rect(self.collision_rect).unwrap();
+            canvas.set_draw_color(color);
         }
     }
 }

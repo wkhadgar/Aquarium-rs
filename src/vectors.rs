@@ -13,8 +13,8 @@ impl Vector2 {
         Self { x, y }
     }
 
-    pub fn from(vec: &Vector2) -> Self {
-        Vector2::new(vec.x, vec.y)
+    pub fn null() -> Self {
+        Self { x: 0.0, y: 0.0 }
     }
 
     pub fn angle(&self) -> f64 {

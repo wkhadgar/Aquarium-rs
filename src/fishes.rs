@@ -77,9 +77,9 @@ impl Fish {
             body: Body::new(100.0, mass, pos),
             behaviour: FishBehaviour::STILL,
             vision: FishVision::new(0.0, 100.0),
-            max_force: 0.0,
+            max_force: 10.0,
             peak_speed,
-            default_speed: 0.0,
+            default_speed: peak_speed / 3.0,
             current_speed: 0.0,
             desires: FishDesireVectors {
                 wander_vector: Vector2::new(0.0, 0.0),
@@ -127,12 +127,19 @@ impl Fish {
         self.body.position += self.body.velocity;
         self.body.velocity_norm = self.body.velocity.norm();
 
-        // body->rect.x = (int) body->position.x - (body->rect.w / 2);
-        // body->rect.y = (int) body->position.y - (body->rect.h / 2);
-        //
-        // Vector2_t norm_vel = vector_normalize(body->velocity);
-        // body->collision_rect.x = body->position.x + ((body->rect.w / 4) * norm_vel.x) - (body->collision_rect.w / 2);
-        // body->collision_rect.y = body->position.y + ((body->rect.h / 4) * norm_vel.y) - (body->collision_rect.w / 2);
+        let body_rect = Vector2::new(self.body.rect.x as f64, self.body.rect.y as f64);
+        let collision_rect = Vector2::new(
+            self.body.collision_rect.x as f64,
+            self.body.collision_rect.y as f64,
+        );
+
+        let (new_rx, new_ry) = (self.body.position - (body_rect * 0.5)).get_components();
+        self.body.rect.set_x(new_rx as i32);
+        self.body.rect.set_y(new_ry as i32);
+        // (self.body.collision_rect.x, self.body.collision_rect.y) = (self.position
+        //     + (self.body.velocity_norm * (self.body.rect.x * 0.25)
+        //     - (self.body.collision_rect * 0.5))
+        //     .get;
     }
 
     pub fn wander(&mut self) {
@@ -140,11 +147,12 @@ impl Fish {
             self.desires.wander_vector += Vector2::random_in_radius(3.0);
         } else {
             self.behaviour = FishBehaviour::WANDERING;
-            self.desires.wander_vector = self.body.velocity.mag(10.0);
+            self.desires.wander_vector = self.body.velocity.mag(20.0);
         }
 
         self.steer(
-            self.desires.wander_vector.mag(10.0) - self.body.velocity,
+            (self.desires.wander_vector.mag(20.0) - self.body.position).mag(4.0)
+                - self.body.velocity,
             self.default_speed,
         );
     }
@@ -214,8 +222,17 @@ impl Fish {
         self.desires.flocking.clear();
     }
 
-    pub fn draw(&self, canvas: WindowCanvas, texture: &render::Texture) {
-        self.body.draw(canvas, texture, false);
+    pub fn pos(&self) -> Vector2 {
+        self.body.position
+    }
+
+    pub fn draw(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture: &render::Texture,
+        display_offset: Vector2,
+    ) {
+        self.body.draw(canvas, texture, false, display_offset);
     }
 }
 
