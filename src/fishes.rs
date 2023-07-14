@@ -1,4 +1,4 @@
-use crate::bodies::Body;
+use crate::bodies::{Body, Position, Vision};
 use crate::vectors::Vector2;
 use sdl2::render;
 use sdl2::render::{Canvas, WindowCanvas};
@@ -76,7 +76,7 @@ impl Fish {
         Self {
             body: Body::new(100.0, mass, pos),
             behaviour: FishBehaviour::STILL,
-            vision: FishVision::new(0.0, 100.0),
+            vision: FishVision::new(10_f64.sqrt(), 100.0),
             max_force: 10.0,
             peak_speed,
             default_speed: peak_speed / 3.0,
@@ -93,20 +93,6 @@ impl Fish {
                 },
             },
         }
-    }
-
-    pub fn is_seeing(&self, target: Body) -> bool {
-        let to_target = target.position - self.body.position;
-
-        if self.body.velocity_norm.dot(to_target.norm()) < self.vision.range {
-            return false;
-        }
-
-        if to_target.length() > self.vision.depth {
-            return false;
-        }
-
-        true
     }
 
     fn steer(&mut self, steer_force: Vector2, mut clamp_speed: f64) {
@@ -236,7 +222,30 @@ impl Fish {
     }
 }
 
-struct Plant {
+impl Vision for Fish {
+    fn in_sight(&self, target: Vector2) -> f64 {
+        let to_target = target - self.body.position;
+
+        if self.body.velocity_norm.dot(to_target.norm()) < self.vision.range {
+            return -1.0;
+        }
+
+        let dist_sqr = to_target.length_sqr();
+        if dist_sqr > self.vision.depth {
+            return -1.0;
+        }
+
+        dist_sqr
+    }
+}
+
+impl Position for Fish {
+    fn pos(&self) -> Vector2 {
+        return self.body.position;
+    }
+}
+
+pub struct Plant {
     body: Body,
     spreading_radius: f64,
 }
@@ -254,5 +263,20 @@ impl Plant {
             self.body.position + Vector2::random_in_radius(self.spreading_radius),
             self.body.mass / 5.0,
         )
+    }
+
+    pub fn draw(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture: &render::Texture,
+        display_offset: Vector2,
+    ) {
+        self.body.draw(canvas, texture, false, display_offset);
+    }
+}
+
+impl Position for Plant {
+    fn pos(&self) -> Vector2 {
+        return self.body.position;
     }
 }

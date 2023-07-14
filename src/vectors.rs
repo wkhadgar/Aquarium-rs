@@ -13,8 +13,15 @@ impl Vector2 {
         Self { x, y }
     }
 
-    pub fn null() -> Self {
+    pub fn default() -> Self {
         Self { x: 0.0, y: 0.0 }
+    }
+
+    pub fn random_in_radius(r: f64) -> Self {
+        let d = (random::<f64>()).sqrt() * r;
+        let thetha = (random::<f64>()) * 2.0 * PI;
+
+        Vector2::new(d * f64::cos(thetha), d * f64::sin(thetha))
     }
 
     pub fn angle(&self) -> f64 {
@@ -25,11 +32,9 @@ impl Vector2 {
         (self.x, self.y)
     }
 
-    pub fn random_in_radius(r: f64) -> Self {
-        let d = (random::<f64>()).sqrt() * r;
-        let thetha = (random::<f64>()) * 2.0 * PI;
-
-        Vector2::new(d * f64::cos(thetha), d * f64::sin(thetha))
+    pub fn offset(&mut self, x: f64, y: f64) {
+        self.x += x;
+        self.y += y;
     }
 
     pub fn length_sqr(&self) -> f64 {

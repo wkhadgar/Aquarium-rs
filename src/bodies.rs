@@ -83,3 +83,11 @@ impl Body {
         }
     }
 }
+
+pub trait Vision {
+    fn in_sight(&self, target: Vector2) -> f64;
+}
+
+pub trait Position {
+    fn pos(&self) -> Vector2;
+}

@@ -1,5 +1,7 @@
-use crate::fishes::Fish;
+use crate::bodies::{Position, Vision};
+use crate::fishes::{Fish, Plant};
 use crate::vectors::Vector2;
+use rand::random;
 use sdl2::event::Event;
 use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
@@ -23,6 +25,10 @@ struct Aquarium<'a> {
     offset_zoom: f64,
 
     textures: Vec<Texture<'a>>,
+
+    plants: Vec<Plant>,
+    preys: Vec<Fish>,
+    predators: Vec<Fish>,
 }
 
 impl<'a> Aquarium<'a> {
@@ -35,9 +41,13 @@ impl<'a> Aquarium<'a> {
             plant_start_amount,
             prey_start_amount,
             pred_start_amount,
-            offset_window: Vector2::null(),
+            offset_window: Vector2::default(),
             offset_zoom: 0.0,
             textures: vec![],
+
+            plants: vec![],
+            preys: vec![],
+            predators: vec![],
         })
     }
 
@@ -57,7 +67,80 @@ impl<'a> Aquarium<'a> {
         canvas.clear();
         canvas.present();
 
+        for _i in 0..self.plant_start_amount {
+            self.plants.push(Plant::new(
+                Vector2::new((random::<f64>() * 1820.0), (random::<f64>() * 1080.0)),
+                20.0,
+            ));
+        }
+
+        for _i in 0..self.prey_start_amount {
+            self.preys.push(Fish::new(
+                Vector2::new((random::<f64>() * 1820.0), (random::<f64>() * 1080.0)),
+                20.0,
+                20.0,
+            ));
+        }
+
+        for _i in 0..self.pred_start_amount {
+            self.predators.push(Fish::new(
+                Vector2::new((random::<f64>() * 1820.0), (random::<f64>() * 1080.0)),
+                20.0,
+                20.0,
+            ));
+        }
+
         self
+    }
+
+    fn check_proximity<O: Vision, T: Position>(origin: &O, vec: &Vec<T>) -> Option<Vector2> {
+        let mut closest_tgt: Option<Vector2> = None;
+        let mut min_dist = f64::MAX;
+        for tgt in vec {
+            let tgt_dist_sqr = origin.in_sight(tgt.pos());
+
+            if (tgt_dist_sqr > 0.0) && (tgt_dist_sqr < min_dist) {
+                min_dist = tgt_dist_sqr;
+                closest_tgt = Some(tgt.pos());
+            }
+        }
+
+        closest_tgt
+    }
+
+    fn process_preys(&mut self, canvas: &mut WindowCanvas) {
+        for i in 0..(self.preys.len() - 1) {
+            let closest_plant = Aquarium::check_proximity(&self.preys[i], &self.plants);
+
+            match closest_plant {
+                Some(Vector2) => {
+                    self.preys[i].seek(Vector2);
+                }
+                None => {}
+            }
+
+            self.preys[i].draw(canvas, &self.textures[1], self.offset_window);
+        }
+
+        for i in 0..(self.plants.len() - 1) {
+            self.plants[i].draw(canvas, &self.textures[0], self.offset_window);
+        }
+    }
+
+    fn process_screen_sliding(&mut self, up: bool, down: bool, right: bool, left: bool) {
+        let speed = 4.0;
+        if up {
+            self.offset_window.offset(0.0, speed);
+        }
+        if down {
+            self.offset_window.offset(0.0, -speed);
+        }
+        if right {
+            self.offset_window.offset(-speed, 0.0);
+        }
+        if left {
+            self.offset_window.offset(speed, 0.0);
+        }
     }
 }
 
@@ -68,8 +151,8 @@ pub fn main() -> Result<(), String> {
     let mut aquarium = Aquarium::create(100, 100, 100)?;
     aquarium.init(&mut canvas, tex_creator);
 
-    let mut test_fish = Fish::new(Vector2::new(200.0, 200.0), 20.0, 20.0);
-
+    let (mut slide_left, mut slide_right, mut slide_up, mut slide_down) =
+        (false, false, false, false);
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -82,35 +165,60 @@ pub fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Up),
                     ..
                 } => {
-                    aquarium.offset_window += Vector2::new(0.0, 5.0);
+                    slide_up = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
                 } => {
-                    aquarium.offset_window += Vector2::new(0.0, -5.0);
+                    slide_down = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     ..
                 } => {
-                    aquarium.offset_window += Vector2::new(-5.0, 0.0);
+                    slide_right = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
                 } => {
-                    aquarium.offset_window += Vector2::new(5.0, 0.0);
+                    slide_left = true;
                 }
+
+                Event::KeyUp {
+                    keycode: Some(Keycode::Up),
+                    ..
+                } => {
+                    slide_up = false;
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => {
+                    slide_down = false;
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Right),
+                    ..
+                } => {
+                    slide_right = false;
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Left),
+                    ..
+                } => {
+                    slide_left = false;
+                }
+
                 _ => {}
             }
         }
 
         fill_bg(&mut canvas, Color::BLACK);
 
-        test_fish.wander();
-        test_fish.draw(&mut canvas, &aquarium.textures[1], aquarium.offset_window);
-
+        aquarium.process_preys(&mut canvas);
+        aquarium.process_screen_sliding(slide_up, slide_down, slide_right, slide_left);
         update_screen(&mut canvas, 60);
     }
 
