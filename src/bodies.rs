@@ -5,7 +5,6 @@ use sdl2::render::{Canvas, Texture, WindowCanvas};
 use sdl2::sys::{SDL_Renderer, SDL_Texture, Window};
 
 pub struct Body {
-    pub health: f64,
     pub mass: f64,
     pub position: Vector2,
     pub velocity: Vector2,
@@ -20,7 +19,6 @@ impl Body {
         let (x, y): (f64, f64) = position.get_components();
         let (vx, vy): (f64, f64) = vel.get_components();
         Self {
-            health,
             mass,
             position,
             velocity: vel,
@@ -42,15 +40,13 @@ impl Body {
             .resize(rect_scaling as u32 / 2, rect_scaling as u32 / 2);
     }
 
-    pub fn grow(&mut self, mass_gained: f64, health_gained: f64) {
+    pub fn grow(&mut self, mass_gained: f64) {
         self.mass += mass_gained;
-        self.health += health_gained;
         self.rescale();
     }
 
-    pub fn shrink(&mut self, mass_loss: f64, health_loss: f64) {
+    pub fn shrink(&mut self, mass_loss: f64) {
         self.mass -= mass_loss;
-        self.health -= health_loss;
         self.rescale();
     }
 
@@ -90,4 +86,8 @@ pub trait Vision {
 
 pub trait Position {
     fn pos(&self) -> Vector2;
+
+    fn vel(&self) -> Vector2 {
+        Vector2::default()
+    }
 }

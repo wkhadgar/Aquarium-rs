@@ -11,17 +11,6 @@ enum FishBehaviour {
     FLEEING,
 }
 
-struct FishVision {
-    range: f64,
-    depth: f64,
-}
-
-impl FishVision {
-    fn new(range: f64, depth: f64) -> Self {
-        Self { range, depth }
-    }
-}
-
 struct Flock {
     separation_vec: Vector2,
     separation_w: f64,
@@ -62,8 +51,10 @@ struct FishDesireVectors {
 
 pub struct Fish {
     body: Body,
+    pub health: u32,
     behaviour: FishBehaviour,
-    vision: FishVision,
+    vision_range: f64,
+    vision_depth: f64,
     desires: FishDesireVectors,
     max_force: f64,
     peak_speed: f64,
@@ -75,8 +66,10 @@ impl Fish {
     pub fn new(pos: Vector2, mass: f64, peak_speed: f64) -> Self {
         Self {
             body: Body::new(100.0, mass, pos),
+            health: 100,
             behaviour: FishBehaviour::STILL,
-            vision: FishVision::new(10_f64.sqrt(), 100.0),
+            vision_range: -0.6,
+            vision_depth: 300.0,
             max_force: 10.0,
             peak_speed,
             default_speed: peak_speed / 3.0,
@@ -112,13 +105,15 @@ impl Fish {
         self.body.position += self.body.velocity;
         self.body.velocity_norm = self.body.velocity.norm();
 
-        let body_rect = Vector2::new(self.body.rect.x as f64, self.body.rect.y as f64);
+        ///////
+
+        let rect_pos = Vector2::new(self.body.rect.w as f64, self.body.rect.h as f64);
         let collision_rect = Vector2::new(
-            self.body.collision_rect.x as f64,
-            self.body.collision_rect.y as f64,
+            self.body.collision_rect.w as f64,
+            self.body.collision_rect.h as f64,
         );
 
-        let (new_rx, new_ry) = (self.body.position - (body_rect * 0.5)).get_components();
+        let (new_rx, new_ry) = (self.body.position - (rect_pos * 0.5)).get_components();
         self.body.rect.set_x(new_rx as i32);
         self.body.rect.set_y(new_ry as i32);
         // (self.body.collision_rect.x, self.body.collision_rect.y) = (self.position
@@ -174,9 +169,9 @@ impl Fish {
         self.steer(desired_velocity - self.body.velocity, self.peak_speed);
     }
 
-    pub fn pursuit(&mut self, target: Self) {
-        let scale = (target.body.position - self.body.position).length() * 0.5;
-        let desired_pos = target.body.position + target.body.velocity.mag(scale);
+    pub fn pursuit(&mut self, target_pos: Vector2, target_vel: Vector2) {
+        let scale = (target_pos - self.body.position).length() * 0.5;
+        let desired_pos = target_pos + target_vel.mag(scale);
 
         self.seek(desired_pos);
     }
@@ -227,43 +222,70 @@ impl Vision for Fish {
     fn in_sight(&self, target: Vector2) -> f64 {
         let to_target = target - self.body.position;
 
-        if self.body.velocity_norm.dot(to_target.norm()) < self.vision.range {
+        let sqr_dist = to_target.length_sqr();
+        if sqr_dist > (self.vision_depth * self.vision_depth) {
             return -1.0;
         }
 
-        let dist_sqr = to_target.length_sqr();
-        if dist_sqr > self.vision.depth {
+        if self.body.velocity_norm.dot(to_target.norm()) < self.vision_range {
             return -1.0;
         }
 
-        dist_sqr
+        sqr_dist
     }
 }
 
 impl Position for Fish {
     fn pos(&self) -> Vector2 {
-        return self.body.position;
+        self.body.position
+    }
+
+    fn vel(&self) -> Vector2 {
+        self.body.velocity
     }
 }
 
 pub struct Plant {
     body: Body,
     spreading_radius: f64,
+    pub health: u32,
 }
 
 impl Plant {
     pub fn new(pos: Vector2, mass: f64) -> Self {
         Self {
             body: Body::new(mass * 1.5, mass, pos),
-            spreading_radius: mass / 3.0,
+            spreading_radius: mass * 5.0,
+            health: mass as u32,
         }
     }
 
-    pub fn spread(&self) -> Self {
-        Self::new(
-            self.body.position + Vector2::random_in_radius(self.spreading_radius),
-            self.body.mass / 5.0,
-        )
+    fn spread(&mut self) -> (Self, Self) {
+        self.health /= 10;
+        let brootlings = (
+            Self::new(
+                self.body.position + Vector2::random_in_radius(self.spreading_radius),
+                self.body.mass / 3.3,
+            ),
+            Self::new(
+                self.body.position + Vector2::random_in_radius(self.spreading_radius),
+                self.body.mass / 3.3,
+            ),
+        );
+        self.body.shrink(self.body.mass / 1.1);
+
+        brootlings
+    }
+
+    pub fn grow(&mut self) -> Option<(Self, Self)> {
+        self.health += 1;
+        self.body.grow(5.0);
+
+        if self.body.mass > 40.0 {
+            return Some(self.spread());
+        }
+
+        None
     }
 
     pub fn draw(

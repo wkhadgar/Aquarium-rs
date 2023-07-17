@@ -1,4 +1,4 @@
-use crate::bodies::{Position, Vision};
+use crate::bodies::{Body, Position, Vision};
 use crate::fishes::{Fish, Plant};
 use crate::vectors::Vector2;
 use rand::random;
@@ -87,45 +87,67 @@ impl<'a> Aquarium<'a> {
 
         let screen_center = Vector2::new(1820.0 / 2.0, 1080.0 / 2.0);
         for _i in 0..self.plant_start_amount {
-            let new_pos = screen_center + Vector2::random_in_radius(300.0);
+            let new_pos = screen_center + Vector2::random_in_radius(500.0);
             self.plants.push(Plant::new(new_pos, 20.0));
         }
 
         for _i in 0..self.prey_start_amount {
-            let new_pos = screen_center + Vector2::random_in_radius(500.0);
+            let new_pos = screen_center + Vector2::random_in_radius(300.0);
             self.preys.push(Fish::new(new_pos, 20.0, 5.0));
         }
 
         for _i in 0..self.pred_start_amount {
             let new_pos = screen_center + Vector2::random_in_radius(500.0);
-            self.predators.push(Fish::new(new_pos, 20.0, 5.0));
+            self.predators.push(Fish::new(new_pos, 80.0, 10.0));
         }
 
         self
     }
 
-    fn check_proximity<O: Vision, T: Position>(origin: &O, vec: &Vec<T>) -> Option<Vector2> {
-        let mut closest_tgt: Option<Vector2> = None;
+    fn check_proximity<O: Vision, T: Position>(
+        origin: &O,
+        vec: &Vec<T>,
+    ) -> (Option<(Vector2, Vector2)>) {
+        let mut closest_tgt = None;
         let mut min_dist = f64::MAX;
         for tgt in vec {
             let tgt_dist_sqr = origin.in_sight(tgt.pos());
 
             if (tgt_dist_sqr > 0.0) && (tgt_dist_sqr < min_dist) {
                 min_dist = tgt_dist_sqr;
-                closest_tgt = Some(tgt.pos());
+                closest_tgt = Some((tgt.pos(), tgt.vel()));
             }
         }
 
         closest_tgt
     }
 
+    fn process_plants(&mut self, canvas: &mut WindowCanvas, do_grow: bool) {
+        let mut i = self.plants.len();
+        while i != 0 {
+            i -= 1;
+            self.plants[i].draw(canvas, &self.textures[0], self.offset_window);
+
+            if do_grow {
+                //let rootlings = self.plants[i].grow();
+                //match rootlings {
+                //TODO
+                //self.plants.push(new_plants.0);
+                //self.plants.push(new_plants.1);
+                //}
+            }
+        }
+    }
+
     fn process_preys(&mut self, canvas: &mut WindowCanvas) {
-        for i in 0..(self.preys.len() - 1) {
+        let mut i = self.preys.len();
+        while i != 0 {
+            i -= 1;
             let closest_plant = Aquarium::check_proximity(&self.preys[i], &self.plants);
 
             match closest_plant {
-                Some(Vector2) => {
-                    self.preys[i].seek(closest_plant.unwrap());
+                Some(plant) => {
+                    self.preys[i].arrive(plant.0);
                 }
                 None => {
                     self.preys[i].wander();
@@ -134,14 +156,29 @@ impl<'a> Aquarium<'a> {
 
             self.preys[i].draw(canvas, &self.textures[1], self.offset_window);
         }
+    }
 
-        for i in 0..(self.plants.len() - 1) {
-            self.plants[i].draw(canvas, &self.textures[0], self.offset_window);
+    fn process_predators(&mut self, canvas: &mut WindowCanvas) {
+        let mut i = self.predators.len();
+        while i != 0 {
+            i -= 1;
+            let closest_prey = Aquarium::check_proximity(&self.predators[i], &self.preys);
+
+            match closest_prey {
+                Some(prey) => {
+                    self.predators[i].pursuit(prey.0, prey.1);
+                }
+                None => {
+                    self.predators[i].wander();
+                }
+            }
+
+            self.predators[i].draw(canvas, &self.textures[2], self.offset_window);
         }
     }
 
     fn process_screen_sliding(&mut self, arrows: &ArrowStates) {
-        let speed = 4.0;
+        let speed = 6.0;
         if arrows.up {
             self.offset_window.offset(0.0, speed);
         }
@@ -161,11 +198,14 @@ pub fn main() -> Result<(), String> {
     let (mut canvas, mut event_pump) = sdl_init()?;
     let tex_creator = &canvas.texture_creator();
 
-    let mut aquarium = Aquarium::create(100, 1000, 0)?;
+    let mut aquarium = Aquarium::create(100, 1000, 10)?;
     aquarium.init(&mut canvas, tex_creator);
 
     let mut arrows = ArrowStates::new();
+    let fps = 60;
+    let mut ticks = 0;
     'running: loop {
+        ticks += 1;
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -229,9 +269,17 @@ pub fn main() -> Result<(), String> {
 
         fill_bg(&mut canvas, Color::BLACK);
 
+        let time_act = ticks > fps;
+        aquarium.process_plants(&mut canvas, time_act);
         aquarium.process_preys(&mut canvas);
+        aquarium.process_predators(&mut canvas);
         aquarium.process_screen_sliding(&arrows);
-        update_screen(&mut canvas, Some(120));
+
+        if time_act {
+            ticks = 0;
+        }
+
+        update_screen(&mut canvas, Some(fps));
     }
 
     Ok(())
