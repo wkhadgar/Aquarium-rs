@@ -100,16 +100,15 @@ impl Fish {
             return;
         }
 
+        let clamp_increment = clamp_speed / 10.0;
         if self.current_speed < clamp_speed {
-            self.current_speed += 0.6;
-            clamp_speed = self.current_speed;
+            self.current_speed += clamp_increment;
         } else if self.current_speed > clamp_speed {
-            self.current_speed -= 0.6;
-            clamp_speed = self.current_speed;
+            self.current_speed -= clamp_increment;
         }
 
-        self.body.velocity +=
-            ((steer_force % self.max_force) * (1.0 / self.body.mass)) % clamp_speed;
+        self.body.velocity += ((steer_force % self.max_force) * (1.0 / self.body.mass));
+        self.body.velocity %= self.current_speed;
         self.body.position += self.body.velocity;
         self.body.velocity_norm = self.body.velocity.norm();
 
@@ -129,16 +128,18 @@ impl Fish {
     }
 
     pub fn wander(&mut self) {
-        if matches!(self.behaviour, FishBehaviour::WANDERING) {
-            self.desires.wander_vector += Vector2::random_in_radius(3.0);
-        } else {
-            self.behaviour = FishBehaviour::WANDERING;
-            self.desires.wander_vector = self.body.velocity.mag(20.0);
+        match self.behaviour {
+            FishBehaviour::WANDERING => {
+                self.desires.wander_vector += Vector2::random_in_radius(5.0);
+            }
+            _ => {
+                self.behaviour = FishBehaviour::WANDERING;
+                self.desires.wander_vector = self.body.velocity.mag(10.0);
+            }
         }
 
         self.steer(
-            (self.desires.wander_vector.mag(20.0) - self.body.position).mag(4.0)
-                - self.body.velocity,
+            self.desires.wander_vector.mag(self.max_force) - self.body.velocity,
             self.default_speed,
         );
     }

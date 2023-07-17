@@ -16,6 +16,24 @@ mod bodies;
 mod fishes;
 mod vectors;
 
+struct ArrowStates {
+    up: bool,
+    down: bool,
+    right: bool,
+    left: bool,
+}
+
+impl ArrowStates {
+    fn new() -> Self {
+        Self {
+            up: false,
+            down: false,
+            right: false,
+            left: false,
+        }
+    }
+}
+
 struct Aquarium<'a> {
     plant_start_amount: u32,
     prey_start_amount: u32,
@@ -67,27 +85,20 @@ impl<'a> Aquarium<'a> {
         canvas.clear();
         canvas.present();
 
+        let screen_center = Vector2::new(1820.0 / 2.0, 1080.0 / 2.0);
         for _i in 0..self.plant_start_amount {
-            self.plants.push(Plant::new(
-                Vector2::new((random::<f64>() * 1820.0), (random::<f64>() * 1080.0)),
-                20.0,
-            ));
+            let new_pos = screen_center + Vector2::random_in_radius(300.0);
+            self.plants.push(Plant::new(new_pos, 20.0));
         }
 
         for _i in 0..self.prey_start_amount {
-            self.preys.push(Fish::new(
-                Vector2::new((random::<f64>() * 1820.0), (random::<f64>() * 1080.0)),
-                20.0,
-                20.0,
-            ));
+            let new_pos = screen_center + Vector2::random_in_radius(500.0);
+            self.preys.push(Fish::new(new_pos, 20.0, 5.0));
         }
 
         for _i in 0..self.pred_start_amount {
-            self.predators.push(Fish::new(
-                Vector2::new((random::<f64>() * 1820.0), (random::<f64>() * 1080.0)),
-                20.0,
-                20.0,
-            ));
+            let new_pos = screen_center + Vector2::random_in_radius(500.0);
+            self.predators.push(Fish::new(new_pos, 20.0, 5.0));
         }
 
         self
@@ -114,9 +125,11 @@ impl<'a> Aquarium<'a> {
 
             match closest_plant {
                 Some(Vector2) => {
-                    self.preys[i].seek(Vector2);
+                    self.preys[i].seek(closest_plant.unwrap());
                 }
-                None => {}
+                None => {
+                    self.preys[i].wander();
+                }
             }
 
             self.preys[i].draw(canvas, &self.textures[1], self.offset_window);
@@ -127,18 +140,18 @@ impl<'a> Aquarium<'a> {
         }
     }
 
-    fn process_screen_sliding(&mut self, up: bool, down: bool, right: bool, left: bool) {
+    fn process_screen_sliding(&mut self, arrows: &ArrowStates) {
         let speed = 4.0;
-        if up {
+        if arrows.up {
             self.offset_window.offset(0.0, speed);
         }
-        if down {
+        if arrows.down {
             self.offset_window.offset(0.0, -speed);
         }
-        if right {
+        if arrows.right {
             self.offset_window.offset(-speed, 0.0);
         }
-        if left {
+        if arrows.left {
             self.offset_window.offset(speed, 0.0);
         }
     }
@@ -148,11 +161,10 @@ pub fn main() -> Result<(), String> {
     let (mut canvas, mut event_pump) = sdl_init()?;
     let tex_creator = &canvas.texture_creator();
 
-    let mut aquarium = Aquarium::create(100, 100, 100)?;
+    let mut aquarium = Aquarium::create(100, 1000, 0)?;
     aquarium.init(&mut canvas, tex_creator);
 
-    let (mut slide_left, mut slide_right, mut slide_up, mut slide_down) =
-        (false, false, false, false);
+    let mut arrows = ArrowStates::new();
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -165,50 +177,50 @@ pub fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Up),
                     ..
                 } => {
-                    slide_up = true;
+                    arrows.up = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
                 } => {
-                    slide_down = true;
+                    arrows.down = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     ..
                 } => {
-                    slide_right = true;
+                    arrows.right = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
                 } => {
-                    slide_left = true;
+                    arrows.left = true;
                 }
 
                 Event::KeyUp {
                     keycode: Some(Keycode::Up),
                     ..
                 } => {
-                    slide_up = false;
+                    arrows.up = false;
                 }
                 Event::KeyUp {
                     keycode: Some(Keycode::Down),
                     ..
                 } => {
-                    slide_down = false;
+                    arrows.down = false;
                 }
                 Event::KeyUp {
                     keycode: Some(Keycode::Right),
                     ..
                 } => {
-                    slide_right = false;
+                    arrows.right = false;
                 }
                 Event::KeyUp {
                     keycode: Some(Keycode::Left),
                     ..
                 } => {
-                    slide_left = false;
+                    arrows.left = false;
                 }
 
                 _ => {}
@@ -218,8 +230,8 @@ pub fn main() -> Result<(), String> {
         fill_bg(&mut canvas, Color::BLACK);
 
         aquarium.process_preys(&mut canvas);
-        aquarium.process_screen_sliding(slide_up, slide_down, slide_right, slide_left);
-        update_screen(&mut canvas, 60);
+        aquarium.process_screen_sliding(&arrows);
+        update_screen(&mut canvas, Some(120));
     }
 
     Ok(())
@@ -230,9 +242,15 @@ fn fill_bg(w_canvas: &mut WindowCanvas, color: Color) {
     w_canvas.clear();
 }
 
-fn update_screen(w_canvas: &mut WindowCanvas, fps: u64) {
+fn update_screen(w_canvas: &mut WindowCanvas, fps: Option<u64>) {
     w_canvas.present();
-    std::thread::sleep(Duration::from_millis(1000 / fps));
+    match fps {
+        None => {
+            return;
+        }
+        Some(_) => {}
+    }
+    std::thread::sleep(Duration::from_millis(1000 / fps.unwrap()));
 }
 
 fn sdl_init() -> Result<(WindowCanvas, EventPump), String> {
