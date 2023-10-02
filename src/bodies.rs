@@ -14,30 +14,41 @@ pub struct Body {
 }
 
 impl Body {
-    pub fn new(health: f64, mass: f64, position: Vector2) -> Self {
+    pub fn get_size(mass: f64) -> u32 {
+        (4.5 * mass.sqrt()) as u32
+    }
+
+    pub fn new(mass: f64, position: Vector2) -> Self {
         let vel = Vector2::random_in_radius(1.0);
         let (x, y): (f64, f64) = position.get_components();
         let (vx, vy): (f64, f64) = vel.get_components();
+        let size = Body::get_size(mass);
         Self {
             mass,
             position,
             velocity: vel,
             velocity_norm: vel.norm(),
-            rect: Rect::new(x as i32, y as i32, mass as u32, mass as u32),
+            rect: Rect::new(x as i32, y as i32, size, size),
             collision_rect: Rect::new(
-                (x + (mass / 4.0) * (if vx < 0.0 { -1.0 } else { 1.0 })) as i32,
-                (y + (mass / 4.0) * (if vy < 0.0 { -1.0 } else { 1.0 })) as i32,
-                (mass / 2.0) as u32,
-                (mass / 2.0) as u32,
+                (x as i32 + (size as i32 / 4) * (if vx < 0.0 { -1 } else { 1 })),
+                (y as i32 + (size as i32 / 4) * (if vy < 0.0 { -1 } else { 1 })),
+                (size / 2),
+                (size / 2),
             ),
         }
     }
 
     fn rescale(&mut self) {
-        let rect_scaling = 5.0 * self.mass.sqrt();
-        self.rect.resize(rect_scaling as u32, rect_scaling as u32);
-        self.rect
-            .resize(rect_scaling as u32 / 2, rect_scaling as u32 / 2);
+        let rect_size = Body::get_size(self.mass);
+        let center = self.rect.center();
+        let (vx, vy) = self.velocity.get_components();
+        self.rect.resize(rect_size, rect_size);
+        self.rect.center_on(center);
+        self.collision_rect.resize((rect_size / 2), (rect_size / 2));
+        self.collision_rect.offset(
+            (self.rect.x() + (rect_size as i32 / 4) * (if vx < 0.0 { -1 } else { 1 })),
+            (self.rect.y() + (rect_size as i32 / 4) * (if vy < 0.0 { -1 } else { 1 })),
+        );
     }
 
     pub fn grow(&mut self, mass_gained: f64) {
@@ -50,18 +61,13 @@ impl Body {
         self.rescale();
     }
 
-    pub fn draw(&self, canvas: &mut WindowCanvas, texture: &Texture, debug: bool, offset: Vector2) {
+    pub fn draw(&self, canvas: &mut WindowCanvas, texture: &Texture, debug: bool) {
         let angle = self.velocity.angle();
-        let mut display_rect = self.rect;
-        let (offset_x, offset_y) = offset.get_components();
-        display_rect.x += offset_x as i32;
-        display_rect.y += offset_y as i32;
-
         canvas
             .copy_ex(
                 texture,
                 None,
-                Some(display_rect),
+                Some(self.rect),
                 angle,
                 None,
                 false,

@@ -88,17 +88,18 @@ impl<'a> Aquarium<'a> {
         let screen_center = Vector2::new(1820.0 / 2.0, 1080.0 / 2.0);
         for _i in 0..self.plant_start_amount {
             let new_pos = screen_center + Vector2::random_in_radius(500.0);
-            self.plants.push(Plant::new(new_pos, 20.0));
+            self.plants.push(Plant::new(new_pos, 25.0));
         }
 
         for _i in 0..self.prey_start_amount {
             let new_pos = screen_center + Vector2::random_in_radius(300.0);
-            self.preys.push(Fish::new(new_pos, 20.0, 5.0));
+            self.preys.push(Fish::new(new_pos, 20.0, 170.0, 800.0, 5.0));
         }
 
         for _i in 0..self.pred_start_amount {
             let new_pos = screen_center + Vector2::random_in_radius(500.0);
-            self.predators.push(Fish::new(new_pos, 80.0, 10.0));
+            self.predators
+                .push(Fish::new(new_pos, 80.0, 90.0, 1000.0, 8.0));
         }
 
         self
@@ -129,12 +130,14 @@ impl<'a> Aquarium<'a> {
             self.plants[i].draw(canvas, &self.textures[0], self.offset_window);
 
             if do_grow {
-                //let rootlings = self.plants[i].grow();
-                //match rootlings {
-                //TODO
-                //self.plants.push(new_plants.0);
-                //self.plants.push(new_plants.1);
-                //}
+                let rootlings = self.plants[i].grow();
+                match rootlings {
+                    None => {}
+                    Some((rootling_1, rootling_2)) => {
+                        self.plants.push(rootling_1);
+                        self.plants.push(rootling_2);
+                    }
+                }
             }
         }
     }
@@ -144,14 +147,20 @@ impl<'a> Aquarium<'a> {
         while i != 0 {
             i -= 1;
             let closest_plant = Aquarium::check_proximity(&self.preys[i], &self.plants);
+            let closest_predator = Aquarium::check_proximity(&self.preys[i], &self.predators);
 
-            match closest_plant {
-                Some(plant) => {
-                    self.preys[i].arrive(plant.0);
+            match closest_predator {
+                Some((preadator_pos, predator_vel)) => {
+                    self.preys[i].evade(preadator_pos, predator_vel);
                 }
-                None => {
-                    self.preys[i].wander();
-                }
+                None => match closest_plant {
+                    Some((plant_pos, _)) => {
+                        self.preys[i].arrive(plant_pos);
+                    }
+                    None => {
+                        self.preys[i].wander();
+                    }
+                },
             }
 
             self.preys[i].draw(canvas, &self.textures[1], self.offset_window);
@@ -165,8 +174,8 @@ impl<'a> Aquarium<'a> {
             let closest_prey = Aquarium::check_proximity(&self.predators[i], &self.preys);
 
             match closest_prey {
-                Some(prey) => {
-                    self.predators[i].pursuit(prey.0, prey.1);
+                Some((prey_pos, prey_vel)) => {
+                    self.predators[i].pursuit(prey_pos, prey_vel);
                 }
                 None => {
                     self.predators[i].wander();
@@ -198,7 +207,7 @@ pub fn main() -> Result<(), String> {
     let (mut canvas, mut event_pump) = sdl_init()?;
     let tex_creator = &canvas.texture_creator();
 
-    let mut aquarium = Aquarium::create(100, 1000, 10)?;
+    let mut aquarium = Aquarium::create(0, 100, 1)?;
     aquarium.init(&mut canvas, tex_creator);
 
     let mut arrows = ArrowStates::new();
@@ -269,7 +278,7 @@ pub fn main() -> Result<(), String> {
 
         fill_bg(&mut canvas, Color::BLACK);
 
-        let time_act = ticks > fps;
+        let time_act = ticks > 2 * fps;
         aquarium.process_plants(&mut canvas, time_act);
         aquarium.process_preys(&mut canvas);
         aquarium.process_predators(&mut canvas);
