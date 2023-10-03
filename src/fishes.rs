@@ -1,7 +1,7 @@
 use crate::bodies::{Body, Position, Vision};
 use crate::vectors::Vector2;
 use sdl2::render;
-use sdl2::render::{Canvas, WindowCanvas};
+use sdl2::render::WindowCanvas;
 
 enum FishBehaviour {
     STILL,
@@ -94,7 +94,7 @@ impl Fish {
         }
     }
 
-    fn steer(&mut self, steer_force: Vector2, mut clamp_speed: f64) {
+    fn steer(&mut self, steer_force: Vector2, clamp_speed: f64) {
         if (steer_force - self.body.position).length_sqr() < 1.0 {
             return;
         }
@@ -106,7 +106,7 @@ impl Fish {
             self.current_speed -= clamp_increment;
         }
 
-        self.body.velocity += ((steer_force % self.max_force) * (1.0 / self.body.mass));
+        self.body.velocity += (steer_force % self.max_force) * (1.0 / self.body.mass);
         self.body.velocity %= self.current_speed;
         self.body.position += self.body.velocity;
         self.body.velocity_norm = self.body.velocity.norm();
@@ -193,7 +193,7 @@ impl Fish {
 
     pub fn ponder_flock(&mut self, neighbor: Body) {
         self.desires.flocking.add(
-            (self.body.position - neighbor.position),
+            self.body.position - neighbor.position,
             neighbor.position,
             neighbor.velocity_norm,
         )
@@ -266,7 +266,7 @@ impl Plant {
         Self {
             body: Body::new(mass, pos),
             spreading_radius: 250.0,
-            health: (mass * 1.5) as u32,
+            health: (mass * 15.0) as u32,
             division_mass: 40.0,
         }
     }
@@ -324,5 +324,18 @@ impl Plant {
 impl Position for Plant {
     fn pos(&self) -> Vector2 {
         return self.body.position;
+    }
+}
+
+impl Vision for Plant {
+    fn in_sight(&self, target: Vector2) -> f64 {
+        let to_target = target - self.body.position;
+
+        let sqr_dist = to_target.length_sqr();
+        if sqr_dist > (self.body.rect.width() * self.body.rect.width()) as f64 {
+            return -1.0;
+        }
+
+        sqr_dist
     }
 }

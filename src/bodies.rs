@@ -1,8 +1,7 @@
 use crate::vectors::Vector2;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::{Canvas, Texture, WindowCanvas};
-use sdl2::sys::{SDL_Renderer, SDL_Texture, Window};
+use sdl2::render::{Texture, WindowCanvas};
 
 pub struct Body {
     pub mass: f64,
