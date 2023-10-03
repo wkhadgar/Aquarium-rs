@@ -3,8 +3,8 @@ use crate::fishes::{Fish, Plant};
 use crate::vectors::Vector2;
 use fltk::button::Button;
 use fltk::enums::FrameType;
-use fltk::frame::Frame;
-use fltk::group::{Group, Pack};
+
+use fltk::group::Group;
 use fltk::input::Input;
 use fltk::{app, prelude::*, window::Window};
 use sdl2::event::Event;
@@ -149,7 +149,7 @@ impl<'a> Aquarium<'a> {
                         }
                     }
                 }
-                Some((prey_pos, _)) => {
+                Some((_prey_pos, _)) => {
                     self.plants[i].health -= 1;
                     if self.plants[i].health < 3 {
                         self.plants.swap_remove(i);
@@ -169,7 +169,7 @@ impl<'a> Aquarium<'a> {
             let closest_predator = Aquarium::check_proximity(&self.preys[i], &self.predators);
 
             match closest_predator {
-                Some((preadator_pos, predator_vel)) => {
+                Some((preadator_pos, _predator_vel)) => {
                     self.preys[i].flee(preadator_pos);
                     if (preadator_pos - self.preys[i].pos()).length() < 10.0 {
                         self.preys.swap_remove(i);
@@ -447,6 +447,7 @@ pub fn main() -> Result<(), String> {
 
         update_screen(&mut canvas, Some(fps));
 
+        /*
         if pl_p as usize != aquarium.plants.len()
             || pr_p as usize != aquarium.preys.len()
             || pd_p as usize != aquarium.predators.len()
@@ -461,7 +462,8 @@ pub fn main() -> Result<(), String> {
                 aquarium.predators.len(),
                 aquarium.preys.len()
             );
-        } else {}
+            }
+            */
     }
 
     Ok(())

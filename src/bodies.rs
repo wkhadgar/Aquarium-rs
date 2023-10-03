@@ -29,10 +29,10 @@ impl Body {
             velocity_norm: vel.norm(),
             rect: Rect::new(x as i32, y as i32, size, size),
             collision_rect: Rect::new(
-                (x as i32 + (size as i32 / 4) * (if vx < 0.0 { -1 } else { 1 })),
-                (y as i32 + (size as i32 / 4) * (if vy < 0.0 { -1 } else { 1 })),
-                (size / 2),
-                (size / 2),
+                x as i32 + (size as i32 / 4) * (if vx < 0.0 { -1 } else { 1 }),
+                y as i32 + (size as i32 / 4) * (if vy < 0.0 { -1 } else { 1 }),
+                size / 2,
+                size / 2,
             ),
         }
     }
@@ -43,10 +43,10 @@ impl Body {
         let (vx, vy) = self.velocity.get_components();
         self.rect.resize(rect_size, rect_size);
         self.rect.center_on(center);
-        self.collision_rect.resize((rect_size / 2), (rect_size / 2));
+        self.collision_rect.resize(rect_size / 2, rect_size / 2);
         self.collision_rect.offset(
-            (self.rect.x() + (rect_size as i32 / 4) * (if vx < 0.0 { -1 } else { 1 })),
-            (self.rect.y() + (rect_size as i32 / 4) * (if vy < 0.0 { -1 } else { 1 })),
+            self.rect.x() + (rect_size as i32 / 4) * (if vx < 0.0 { -1 } else { 1 }),
+            self.rect.y() + (rect_size as i32 / 4) * (if vy < 0.0 { -1 } else { 1 }),
         );
     }
 

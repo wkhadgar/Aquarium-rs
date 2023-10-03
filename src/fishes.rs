@@ -112,7 +112,7 @@ impl Fish {
         self.body.velocity_norm = self.body.velocity.norm();
     }
 
-    pub fn update_rects(&mut self, offset: Vector2, scale: f64) {
+    pub fn update_rects(&mut self, offset: Vector2, _scale: f64) {
         let rect_size = Vector2::new(self.body.rect.w as f64, self.body.rect.h as f64);
         let collision_rect_size = Vector2::new(
             self.body.collision_rect.w as f64,
@@ -299,9 +299,9 @@ impl Plant {
         None
     }
 
-    pub fn update_rects(&mut self, offset: Vector2, scale: f64) {
+    pub fn update_rects(&mut self, offset: Vector2, _scale: f64) {
         let rect_pos = Vector2::new(self.body.rect.w as f64, self.body.rect.h as f64);
-        let collision_rect = Vector2::new(
+        let _collision_rect = Vector2::new(
             self.body.collision_rect.w as f64,
             self.body.collision_rect.h as f64,
         );
